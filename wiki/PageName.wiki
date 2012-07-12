@@ -1,0 +1,73 @@
+#WRF file format overview
+
+= Introduction =
+
+This is a brief description of the Cisco WebEx .wrf file format. For more details, please read the code.
+
+
+= Format Overview =
+
+A wrf file consists of the following pieces:
+
+  * File header
+  * Optional key frame descriptor
+  * Key frame
+  * Array of T-L-V records
+
+Additionally, certain types of records can contain subrecords.
+
+= File header =
+
+The header starts at offset 0 in the file, and looks like this:
+
+0x0:BYTE sig[4];
+0x4:DWORD version;
+0x8: DWORD fileSize;  //not always correct?
+0xc: DWORD someFrameThing;
+0x10: WORD unknown1;
+0x12: WORD unknown2;
+0x14: WORD unknown3;
+0x16: WORD hasKeyFrameOffset;
+0x18: DWORD hasKeyFrameOffset2;	
+0x1c: DWORD totalFrameCount
+0x20: WORD extendedHeaderLen;
+0x22: WORD extendedHeaderLen2;
+
+sig is always WOTF.
+version varies, and is used in several places throughout the code to determine the size of certain records.
+fileSize does not always match the actual size of the file, it may reflect the size after certain a/v data is decompressed?
+I haven't seen a file with the extended length fields, but according to the code they extend the length of the header, as they're added on to the current offset to move to the next file segment.
+
+If hasKeyFrameOffset != 0 or hasKeyFrameOffset2 != 0, then the file has the key frame descriptor section, which comes directly after the header.
+
+= Keyframe descriptor =
+
+This section of the file describes where to locate the key frame, and looks like this:
+
+0x0: DWORD keyframeOffset;
+0x4: DWORD unknown;
+
+keyFrameOffset is the offset in the file (starting after the key frame descriptor) of where to find the key frame. To find the key frame:
+
+keyFrameOffset = totalHeaderLength (including xtra len fields) + sizeof(keyFrameDescriptor) + keyFrameOffset
+
+= Keyframe =
+
+The key frame varies in size depending on the file header version field. Specifically:
+
+    if version < 0x401:
+        size = 0x9
+    else:
+        size = 0x24
+
+It looks like this:
+
+0x0: BYTE keyframeType;	//always 7 it seems
+0x1: DWORD keyframeTime;
+0x5: DWORD keyframeSize;
+0x9: BYTE unknown1;
+0xa: BYTE the_rest[xx]	//donno
+
+I haven't looked at any code that really uses these, but their names do most of the talking.
+
+= Records =
