@@ -93,8 +93,8 @@ BYTE data[len + xLen]
 }}}
 
   * typeAndXlen are a bitfield, with the low 4 bytes holding the type. The high 12 bits are shifted as above, and added to the 'len' field to get the total length of the record.
-  ** the length is the length of the data that follows, not inclusive of header fields.
-  ** So, all together there are 28 bits of length
+  * the length is the length of the data that follows, not inclusive of header fields.
+  * So, all together there are 28 bits of length
 
 == Record Types ==
 
@@ -103,30 +103,53 @@ There are a few different groups of record types. The following is not perfect, 
 === 1, 3, 9 ===
 if data length is > 5, they contain subchunks. subchunk format is simple:
 
+{{{
 {
 BYTE type
 WORD len
 }
+}}}
 
-however, only contain subchunks if the first 4 bytes of record data == 0, which are then skipped and look for subchunks
+In this case, len is inclusive of the header itself.
+
+There are some caveats here, and more research is required to fully flesh this out. But I've noticed the following:
+
+  * The first 4 bytes of the data field contain flags/indicator of some sort sort.
+  * If 0 is found, the chunk definitely contains subrecords
+  * If non-0 is found, the chunk *may* contain subrecords
+  * 0xefca seems to indicate subrecords follow
+
+This first 4 bytes field needs to be investigated further to determine the remaining cases. Also, it's possible that the two unknown fields in the record header indicate something.
 
 === 2 ===
 
-some audio data, it doesn't contain subrecords
+Audio data, doesn't contain subrecords.
 
 === 8 ===
 
+Unknown, but unfortunately the length field does not give the actual length of this record. So, in order to successfully parse the rest of the file you must skip bytes as follows:
+
+{{{
 read in next 9 bytes
 
 first1 byte is used for a switch:
 skip 4
 next 4 are a length
 
+switch:
 1: add length to offset and read next record
 3: read in 0x18 bytes, add length to offset and go
 default: add length to offset and read next record
+}}}
 
 === all other types ===
 
-if version < 0x409, skip 9 bytes
+Unknown, but again the length field is broken. Skip as follows.
+
+if version < 0x409, then skip 9 bytes
+
 else skip 0x24 bytes
+
+= End =
+
+There's a lot more to be documented, but I only had a few days and WebEx isn't super exciting.
