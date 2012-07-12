@@ -20,6 +20,7 @@ Additionally, certain types of records can contain subrecords.
 
 The header starts at offset 0 in the file, and looks like this:
 
+{{{
 0x0:BYTE sig[4];
 0x4:DWORD version;
 0x8: DWORD fileSize;  //not always correct?
@@ -32,11 +33,12 @@ The header starts at offset 0 in the file, and looks like this:
 0x1c: DWORD totalFrameCount
 0x20: WORD extendedHeaderLen;
 0x22: WORD extendedHeaderLen2;
+}}}
 
-sig is always WOTF.
-version varies, and is used in several places throughout the code to determine the size of certain records.
-fileSize does not always match the actual size of the file, it may reflect the size after certain a/v data is decompressed?
-I haven't seen a file with the extended length fields, but according to the code they extend the length of the header, as they're added on to the current offset to move to the next file segment.
+  * sig is always WOTF.
+  * version varies, and is used in several places throughout the code to determine the size of certain records.
+  * fileSize does not always match the actual size of the file, it may reflect the size after certain a/v data is decompressed?
+  * I haven't seen a file with the extended length fields, but according to the code they extend the length of the header, as they're added on to the current offset to move to the next file segment.
 
 If hasKeyFrameOffset != 0 or hasKeyFrameOffset2 != 0, then the file has the key frame descriptor section, which comes directly after the header.
 
@@ -44,30 +46,87 @@ If hasKeyFrameOffset != 0 or hasKeyFrameOffset2 != 0, then the file has the key 
 
 This section of the file describes where to locate the key frame, and looks like this:
 
+{{{
 0x0: DWORD keyframeOffset;
 0x4: DWORD unknown;
+}}}
 
 keyFrameOffset is the offset in the file (starting after the key frame descriptor) of where to find the key frame. To find the key frame:
 
+{{{
 keyFrameOffset = totalHeaderLength (including xtra len fields) + sizeof(keyFrameDescriptor) + keyFrameOffset
+}}}
 
 = Keyframe =
 
 The key frame varies in size depending on the file header version field. Specifically:
 
+{{{
     if version < 0x401:
         size = 0x9
     else:
         size = 0x24
+}}}
 
 It looks like this:
 
+{{{
 0x0: BYTE keyframeType;	//always 7 it seems
 0x1: DWORD keyframeTime;
 0x5: DWORD keyframeSize;
 0x9: BYTE unknown1;
 0xa: BYTE the_rest[xx]	//donno
+}}}
 
 I haven't looked at any code that really uses these, but their names do most of the talking.
 
 = Records =
+
+The records start after the key frame. They look like this:
+
+{{{
+BYTE typeAndXLen;	low 4 bits type, high 12 bits "extra len?" (xLen = (typeAndXLen >> 4) << 0x10)
+BYTE uk1;	//no clue
+BYTE uk2;	//no clue
+WORD len;	//"normal" length
+BYTE data[len + xLen]
+}}}
+
+  * typeAndXlen are a bitfield, with the low 4 bytes holding the type. The high 12 bits are shifted as above, and added to the 'len' field to get the total length of the record.
+  ** the length is the length of the data that follows, not inclusive of header fields.
+  ** So, all together there are 28 bits of length
+
+== Record Types ==
+
+There are a few different groups of record types. The following is not perfect, as I haven't seen all of the types or reversed all of the code. Types are handled as follows.
+
+=== 1, 3, 9 ===
+if data length is > 5, they contain subchunks. subchunk format is simple:
+
+{
+BYTE type
+WORD len
+}
+
+however, only contain subchunks if the first 4 bytes of record data == 0, which are then skipped and look for subchunks
+
+=== 2 ===
+
+some audio data, it doesn't contain subrecords
+
+=== 8 ===
+
+read in next 9 bytes
+
+first1 byte is used for a switch:
+skip 4
+next 4 are a length
+
+1: add length to offset and read next record
+3: read in 0x18 bytes, add length to offset and go
+default: add length to offset and read next record
+
+=== all other types ===
+
+if version < 0x409, skip 9 bytes
+else skip 0x24 bytes
