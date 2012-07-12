@@ -4,6 +4,8 @@
 
 This is a brief description of the Cisco WebEx .wrf file format. For more details, please read the code.
 
+All of this was performed with the latest release of the WebEx Player as of 07/12/2012. I used the installer atcrecply.msi version 28.0.100.321. I've included it in the source archive here in case it disappears.
+
 
 = Format Overview =
 
@@ -153,3 +155,7 @@ else skip 0x24 bytes
 = End =
 
 There's a lot more to be documented, but I only had a few days and WebEx isn't super exciting.
+
+= Bonus =
+
+Have some helpful breakpoint locations and symbols names.
