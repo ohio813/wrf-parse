@@ -162,15 +162,19 @@ Have some helpful breakpoint locations and symbols names.
 
 From atcrecply.dll (2028.1200.100.1000):
 
+{{{
 .text:1002A680 readHeaderAndChunks
 .text:10021CF0 ; int __stdcall readFile(LPVOID lpBuffer, DWORD nNumberOfBytesToRead)
 .text:1001EFD0 ; int __cdecl debugMsg(int, LPCWSTR, char arglist) #this is really useful function
 .text:100235F0 processFileHeader
 .text:10029530 ; int __stdcall storeChunk
+}}}
 
 From atas32.dll (2028.1201.300.500)
 
+{{{
 .text:60110D5A processRecordSubData
+}}}
 
 To enable debug output via debug strings, set:
 
