@@ -1,0 +1,1 @@
+This is the output of a few days reversing and documenting the Cisco WebEx Player wrf file format. It consists of brief documentation of the file format and a simple parser.
